@@ -13,6 +13,20 @@ window.Sonia.initSeries = function () {
   const cleanupFns = [];
   const normalize = (value) => (value || "").trim().toLowerCase();
   const formatTwoDigits = (value) => String(value).padStart(2, "0");
+  const refreshRuntime = () => {
+    window.lenis?.resize?.();
+    window.ScrollTrigger?.refresh?.();
+  };
+
+  const refreshTimeoutIds = [];
+  const scheduleRuntimeRefresh = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(refreshRuntime);
+    });
+
+    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 120));
+    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 360));
+  };
 
   const root = document.querySelector('[data-sync="series-gallery"]');
 
@@ -22,6 +36,9 @@ window.Sonia.initSeries = function () {
     const track = root.querySelector('[data-sync-track]');
     const texts = Array.from(root.querySelectorAll('[data-sync-text]'));
     const images = Array.from(document.querySelectorAll('[data-sync-image]'));
+    const mediaImages = Array.from(
+      document.querySelectorAll('[data-sync-image] img, .serie-slider__img')
+    );
     const currentEl = root.querySelector('[data-sync-current]');
     const totalEl = root.querySelector('[data-sync-total]');
 
@@ -108,8 +125,24 @@ window.Sonia.initSeries = function () {
         requestUpdate();
       };
 
+      const imageLoadHandlers = mediaImages
+        .map((image) => {
+          if (image.complete) return null;
+
+          const onImageLoad = () => {
+            measure();
+            requestUpdate();
+            scheduleRuntimeRefresh();
+          };
+
+          image.addEventListener("load", onImageLoad);
+          return { image, onImageLoad };
+        })
+        .filter(Boolean);
+
       measure();
       requestUpdate();
+      scheduleRuntimeRefresh();
 
       window.addEventListener("load", onLoad);
       window.addEventListener("resize", onResize);
@@ -119,6 +152,9 @@ window.Sonia.initSeries = function () {
         window.removeEventListener("load", onLoad);
         window.removeEventListener("resize", onResize);
         window.removeEventListener("scroll", onScroll);
+        imageLoadHandlers.forEach(({ image, onImageLoad }) => {
+          image.removeEventListener("load", onImageLoad);
+        });
         root.dataset.seriesGalleryInitialized = "false";
       });
     }
@@ -268,161 +304,11 @@ window.Sonia.initSeries = function () {
     });
   }
 
-  const loader = document.querySelector(".serie-next__loader");
-  const signature = loader?.querySelector('[data-element="signature"]');
-  const paths = signature ? Array.from(signature.querySelectorAll(".mask path")) : [];
-
-  if (
-    trigger &&
-    nextLink &&
-    loader &&
-    signature &&
-    paths.length &&
-    typeof window.gsap !== "undefined" &&
-    trigger.dataset.seriesLoaderInitialized !== "true"
-  ) {
-    trigger.dataset.seriesLoaderInitialized = "true";
-
-    const { gsap } = window;
-    const POSITION_TOLERANCE = 2;
-
-    let hasRedirected = false;
-    let animationStarted = false;
-    let ticking = false;
-    let loaderTimeline = null;
-
-    const isLoaderFullyVisible = () => {
-      const rect = loader.getBoundingClientRect();
-
-      const fullyVisibleVertically =
-        rect.top >= -POSITION_TOLERANCE &&
-        rect.bottom <= window.innerHeight + POSITION_TOLERANCE;
-
-      const fullyVisibleHorizontally =
-        rect.left >= -POSITION_TOLERANCE &&
-        rect.right <= window.innerWidth + POSITION_TOLERANCE;
-
-      return fullyVisibleVertically && fullyVisibleHorizontally;
-    };
-
-    const getOrderedPaths = () => {
-      return [...paths].sort((a, b) => a.getBBox().x - b.getBBox().x);
-    };
-
-    const preparePaths = () => {
-      paths.forEach((path) => {
-        const length = path.getTotalLength();
-        path.style.strokeDasharray = `${length} ${length}`;
-        path.style.strokeDashoffset = `${length}`;
-      });
-    };
-
-    const hideLoader = () => {
-      gsap.set(loader, { autoAlpha: 0 });
-      gsap.set(signature, { autoAlpha: 0 });
-    };
-
-    const showLoader = () => {
-      gsap.set(loader, { autoAlpha: 1 });
-      gsap.set(signature, { autoAlpha: 1 });
-    };
-
-    const resetLoader = () => {
-      if (loaderTimeline) {
-        loaderTimeline.kill();
-        loaderTimeline = null;
-      }
-
-      animationStarted = false;
-      preparePaths();
-      hideLoader();
-    };
-
-    const hardResetState = () => {
-      hasRedirected = false;
-      resetLoader();
-    };
-
-    const startLoaderAnimation = () => {
-      if (animationStarted || hasRedirected) return;
-
-      animationStarted = true;
-      showLoader();
-      preparePaths();
-
-      const orderedPaths = getOrderedPaths();
-      const totalDuration = 2.4;
-      const endDelay = 0.3;
-      const pathDuration = totalDuration / orderedPaths.length;
-
-      loaderTimeline = gsap.timeline({
-        onComplete: () => {
-          hasRedirected = true;
-          window.location.href = nextLink.href;
-        }
-      });
-
-      orderedPaths.forEach((path, index) => {
-        loaderTimeline.to(path, {
-          strokeDashoffset: 0,
-          duration: pathDuration,
-          ease: "none"
-        }, index * pathDuration);
-      });
-
-      loaderTimeline.to({}, {
-        duration: endDelay
-      });
-    };
-
-    const updateLoaderState = () => {
-      ticking = false;
-
-      if (hasRedirected) return;
-
-      if (isLoaderFullyVisible()) {
-        startLoaderAnimation();
-      } else {
-        resetLoader();
-      }
-    };
-
-    const requestUpdate = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(updateLoaderState);
-    };
-
-    hideLoader();
-    preparePaths();
-    requestUpdate();
-
-    const onResize = () => requestUpdate();
-    const onScroll = () => requestUpdate();
-    const onLoad = () => requestUpdate();
-    const onPageShow = () => {
-      hardResetState();
-      requestUpdate();
-    };
-
-    window.addEventListener("load", onLoad);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("pageshow", onPageShow);
-
-    cleanupFns.push(() => {
-      window.removeEventListener("load", onLoad);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("pageshow", onPageShow);
-
-      if (loaderTimeline) {
-        loaderTimeline.kill();
-      }
-
-      trigger.dataset.seriesLoaderInitialized = "false";
+  cleanupFns.push(() => {
+    refreshTimeoutIds.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
     });
-  }
+  });
 
   window.Sonia._seriesCleanup = cleanupFns;
 };
