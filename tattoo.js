@@ -1,4 +1,8 @@
-window.addEventListener("load", () => {
+window.Sonia = window.Sonia || {};
+
+window.Sonia.initTattoo = function () {
+  if (window.Sonia._tattooInitialized === true) return;
+
   const selectors = {
     section: ".mwg_effect026",
     container: ".container",
@@ -39,6 +43,9 @@ window.addEventListener("load", () => {
     typeof Observer === "undefined"
   ) return;
 
+  window.Sonia._tattooInitialized = true;
+
+  const cleanupFns = [];
   const overlayPanel = overlay.querySelector(selectors.overlayPanel);
   const beforeCompare = overlay.querySelector(selectors.beforeCompare);
   const afterCompare = overlay.querySelector(selectors.afterCompare);
@@ -294,6 +301,14 @@ window.addEventListener("load", () => {
     });
   };
 
+  const getAllContentBlocks = () => {
+    return Array.from(container.querySelectorAll(".content"));
+  };
+
+  const getAllGalleryItems = () => {
+    return Array.from(container.querySelectorAll(selectors.mediaItem));
+  };
+
   const refreshMotionMediaItems = () => {
     motionMediaItems = getAllGalleryItems();
   };
@@ -546,14 +561,6 @@ window.addEventListener("load", () => {
     });
   };
 
-  const getAllContentBlocks = () => {
-    return Array.from(container.querySelectorAll(".content"));
-  };
-
-  const getAllGalleryItems = () => {
-    return Array.from(container.querySelectorAll(selectors.mediaItem));
-  };
-
   const getFilteredMasterItems = (filterKey) => {
     const filteredItems = !filterKey
       ? masterItems
@@ -608,6 +615,8 @@ window.addEventListener("load", () => {
     node.innerHTML = template.innerHTML;
   };
 
+  const mediaBindings = [];
+
   const attachMediaInteractions = () => {
     medias.forEach((media, index) => {
       const normalizedIndex = mediaCount ? index % mediaCount : 0;
@@ -619,14 +628,18 @@ window.addEventListener("load", () => {
 
       if (media.dataset.interactionsBound === "true") return;
 
-      media.addEventListener("click", () => openOverlay(normalizedIndex, media));
-      media.addEventListener("keydown", (event) => {
+      const onClick = () => openOverlay(normalizedIndex, media);
+      const onKeydown = (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         openOverlay(normalizedIndex, media);
-      });
+      };
+
+      media.addEventListener("click", onClick);
+      media.addEventListener("keydown", onKeydown);
 
       media.dataset.interactionsBound = "true";
+      mediaBindings.push({ media, onClick, onKeydown });
     });
   };
 
@@ -877,22 +890,22 @@ window.addEventListener("load", () => {
     runDesktopFilterTransition(nextFilter);
   };
 
-  closeButton.addEventListener("click", (event) => {
+  const onCloseClick = (event) => {
     event.preventDefault();
     closeOverlay();
-  });
+  };
 
-  previousButton.addEventListener("click", (event) => {
+  const onPreviousClick = (event) => {
     event.preventDefault();
     showPrevious();
-  });
+  };
 
-  nextButton.addEventListener("click", (event) => {
+  const onNextClick = (event) => {
     event.preventDefault();
     showNext();
-  });
+  };
 
-  overlay.addEventListener("click", (event) => {
+  const onOverlayClick = (event) => {
     if (!isOverlayOpen()) return;
     if (isOverlayTransitioning) return;
 
@@ -903,22 +916,48 @@ window.addEventListener("load", () => {
     if (!clickedInsidePanel && !clickedPrevious && !clickedNext) {
       closeOverlay();
     }
-  });
+  };
 
-  window.addEventListener("keydown", (event) => {
+  const onWindowKeydown = (event) => {
     if (!isOverlayOpen()) return;
     if (isOverlayTransitioning) return;
 
     if (event.key === "Escape") closeOverlay();
     if (event.key === "ArrowLeft") showPrevious();
     if (event.key === "ArrowRight") showNext();
+  };
+
+  closeButton.addEventListener("click", onCloseClick);
+  previousButton.addEventListener("click", onPreviousClick);
+  nextButton.addEventListener("click", onNextClick);
+  overlay.addEventListener("click", onOverlayClick);
+  window.addEventListener("keydown", onWindowKeydown);
+
+  cleanupFns.push(() => {
+    closeButton.removeEventListener("click", onCloseClick);
+    previousButton.removeEventListener("click", onPreviousClick);
+    nextButton.removeEventListener("click", onNextClick);
+    overlay.removeEventListener("click", onOverlayClick);
+    window.removeEventListener("keydown", onWindowKeydown);
   });
+
+  const filterBindings = [];
 
   filterButtons.forEach((button) => {
     button.style.cursor = "pointer";
-    button.addEventListener("click", (event) => {
+
+    const onClick = (event) => {
       event.preventDefault();
       toggleFilter(getFilterKey(button));
+    };
+
+    button.addEventListener("click", onClick);
+    filterBindings.push({ button, onClick });
+  });
+
+  cleanupFns.push(() => {
+    filterBindings.forEach(({ button, onClick }) => {
+      button.removeEventListener("click", onClick);
     });
   });
 
@@ -946,7 +985,12 @@ window.addEventListener("load", () => {
     }
   });
 
-  window.addEventListener("resize", () => {
+  cleanupFns.push(() => {
+    galleryObserver?.kill();
+    galleryObserver = null;
+  });
+
+  const onResize = () => {
     const isNowMobileGallery = isMobileGallery();
 
     if (isNowMobileGallery !== wasMobileGallery) {
@@ -958,6 +1002,34 @@ window.addEventListener("load", () => {
     if (!isNowMobileGallery) {
       syncScrollerBounds();
     }
+  };
+
+  window.addEventListener("resize", onResize);
+
+  cleanupFns.push(() => {
+    window.removeEventListener("resize", onResize);
+  });
+
+  cleanupFns.push(() => {
+    if (clipResetDelay) {
+      clipResetDelay.kill();
+      clipResetDelay = null;
+    }
+
+    gsap.killTweensOf(clipProxy);
+  });
+
+  cleanupFns.push(() => {
+    mediaBindings.forEach(({ media, onClick, onKeydown }) => {
+      media.removeEventListener("click", onClick);
+      media.removeEventListener("keydown", onKeydown);
+      media.dataset.interactionsBound = "false";
+    });
+  });
+
+  cleanupFns.push(() => {
+    closeOverlay(true);
+    section.dataset.tattooInitialized = "false";
   });
 
   overlay.classList.remove("hide");
@@ -966,5 +1038,20 @@ window.addEventListener("load", () => {
   rebuildGallery();
   setOverlayInitialState();
 
+  window.Sonia._tattooCleanup = cleanupFns;
+
   console.log("tattoo real loaded");
-});
+};
+
+window.Sonia.destroyTattoo = function () {
+  const cleanupFns = window.Sonia._tattooCleanup || [];
+  cleanupFns.forEach((fn) => {
+    if (typeof fn === "function") fn();
+  });
+  window.Sonia._tattooCleanup = [];
+  window.Sonia._tattooInitialized = false;
+};
+
+if (document.querySelector(".mwg_effect026")) {
+  window.Sonia.initTattoo();
+}
