@@ -307,8 +307,8 @@ window.Sonia.initSeries = function () {
 
   if (trigger && nextLink) {
     let isNavigatingToNextSeries = false;
-    let nextSeriesObserver = null;
     let nextSeriesTimeline = null;
+    let hasReachedSeriesBottom = false;
     const nextSeriesLoader = document.querySelector(".serie-next__loader");
     const nextSeriesSignature = nextSeriesLoader?.querySelector('[data-element="signature"]');
     const nextSeriesPaths = nextSeriesSignature
@@ -410,29 +410,28 @@ window.Sonia.initSeries = function () {
     nextLink.addEventListener("click", onNextLinkClick);
     trigger.addEventListener("click", onTriggerClick);
 
-    if ("IntersectionObserver" in window) {
-      nextSeriesObserver = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          if (!entry || !entry.isIntersecting) return;
-          if (entry.intersectionRatio < 0.98) return;
-          animateNextSeriesThenNavigate();
-        },
-        {
-          threshold: [0.98, 1]
-        }
-      );
+    const onNextSeriesScroll = () => {
+      if (hasReachedSeriesBottom) return;
 
-      nextSeriesObserver.observe(trigger);
-    }
+      const scrollBottom = window.scrollY + window.innerHeight;
+      const documentBottom = document.documentElement.scrollHeight;
+
+      if (scrollBottom < documentBottom - 24) return;
+
+      hasReachedSeriesBottom = true;
+      animateNextSeriesThenNavigate();
+    };
+
+    window.addEventListener("scroll", onNextSeriesScroll, { passive: true });
 
     hideNextSeriesLoader();
     prepareNextSeriesPaths();
+    onNextSeriesScroll();
 
     cleanupFns.push(() => {
       nextLink.removeEventListener("click", onNextLinkClick);
       trigger.removeEventListener("click", onTriggerClick);
-      nextSeriesObserver?.disconnect();
+      window.removeEventListener("scroll", onNextSeriesScroll);
       nextSeriesTimeline?.kill();
     });
   }

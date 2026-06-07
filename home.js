@@ -2,16 +2,17 @@ window.Sonia = window.Sonia || {};
 
 window.Sonia.initHome = function () {
   const { gsap } = window;
+  const homeRoot = document.querySelector(".page-home");
   const hasHomePage =
-    document.querySelector(".page-home") &&
-    document.querySelector('[data-home-sync="gallery"]') &&
+    homeRoot &&
+    homeRoot.querySelector('[data-home-sync="gallery"]') &&
     document.querySelector('[data-work="section"]');
 
   if (!gsap || !hasHomePage) return;
 
   const workSection = document.querySelector('[data-work="section"]');
   const workItems = Array.from(document.querySelectorAll('[data-work="item"]'));
-  const syncRoot = document.querySelector('[data-home-sync="gallery"]');
+  const syncRoot = homeRoot.querySelector('[data-home-sync="gallery"]');
 
   if (!workSection || !workItems.length || !syncRoot) return;
   if (workSection.dataset.homeInitialized === "true") return;
@@ -50,7 +51,7 @@ window.Sonia.initHome = function () {
   });
 
   const seriesMeta = new Map();
-  const metaEntries = Array.from(document.querySelectorAll('[data-home-series-entry]'));
+  const metaEntries = Array.from(homeRoot.querySelectorAll('[data-home-series-entry]'));
 
   metaEntries.forEach((entry) => {
     const slug = normalize(entry.getAttribute("data-home-series-slug"));
@@ -97,7 +98,7 @@ window.Sonia.initHome = function () {
     id: item.getAttribute("data-home-sync-id"),
     imageWrapper: item.querySelector('[data-work="image-wrapper"]')
   }));
-  const mediaImages = Array.from(document.querySelectorAll('[data-work="image"]'));
+  const mediaImages = Array.from(homeRoot.querySelectorAll('[data-work="image"]'));
 
   const wrapIndex = (index) => (index + slides.length) % slides.length;
 
