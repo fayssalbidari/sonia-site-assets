@@ -14,6 +14,7 @@ window.Sonia.initSeries = function () {
   const normalize = (value) => (value || "").trim().toLowerCase();
   const formatTwoDigits = (value) => String(value).padStart(2, "0");
   const refreshRuntime = () => {
+    window.lenis?.start?.();
     window.lenis?.resize?.();
     window.ScrollTrigger?.refresh?.();
   };
@@ -301,6 +302,74 @@ window.Sonia.initSeries = function () {
 
     cleanupFns.push(() => {
       nextLayout.dataset.seriesMetaInitialized = "false";
+    });
+  }
+
+  if (trigger && nextLink) {
+    let isNavigatingToNextSeries = false;
+    let nextSeriesObserver = null;
+
+    const goToNextSeries = () => {
+      if (isNavigatingToNextSeries) return;
+
+      const nextHref = nextLink.href;
+      if (!nextHref) return;
+
+      const nextUrl = new URL(nextHref, window.location.href);
+      const currentUrl = new URL(window.location.href);
+
+      if (
+        nextUrl.pathname === currentUrl.pathname &&
+        nextUrl.search === currentUrl.search &&
+        nextUrl.hash === currentUrl.hash
+      ) {
+        return;
+      }
+
+      isNavigatingToNextSeries = true;
+
+      if (window.barba?.go) {
+        window.barba.go(nextHref);
+        return;
+      }
+
+      window.location.href = nextHref;
+    };
+
+    const onNextLinkClick = (event) => {
+      event.preventDefault();
+      goToNextSeries();
+    };
+
+    const onTriggerClick = (event) => {
+      if (event.target.closest(".serie-slider__link")) return;
+      event.preventDefault();
+      goToNextSeries();
+    };
+
+    nextLink.addEventListener("click", onNextLinkClick);
+    trigger.addEventListener("click", onTriggerClick);
+
+    if ("IntersectionObserver" in window) {
+      nextSeriesObserver = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry || !entry.isIntersecting) return;
+          if (entry.intersectionRatio < 0.98) return;
+          goToNextSeries();
+        },
+        {
+          threshold: [0.98, 1]
+        }
+      );
+
+      nextSeriesObserver.observe(trigger);
+    }
+
+    cleanupFns.push(() => {
+      nextLink.removeEventListener("click", onNextLinkClick);
+      trigger.removeEventListener("click", onTriggerClick);
+      nextSeriesObserver?.disconnect();
     });
   }
 

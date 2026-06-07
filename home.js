@@ -27,6 +27,21 @@ window.Sonia.initHome = function () {
 
   const normalize = (value) => (value || "").trim().toLowerCase();
   const formatTwoDigits = (value) => String(value).padStart(2, "0");
+  const refreshRuntime = () => {
+    window.lenis?.start?.();
+    window.lenis?.resize?.();
+    window.ScrollTrigger?.refresh?.();
+  };
+
+  const refreshTimeoutIds = [];
+  const scheduleRuntimeRefresh = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(refreshRuntime);
+    });
+
+    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 120));
+    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 360));
+  };
 
   const textMap = new Map();
   syncTexts.forEach((item, index) => {
@@ -82,6 +97,7 @@ window.Sonia.initHome = function () {
     id: item.getAttribute("data-home-sync-id"),
     imageWrapper: item.querySelector('[data-work="image-wrapper"]')
   }));
+  const mediaImages = Array.from(document.querySelectorAll('[data-work="image"]'));
 
   const wrapIndex = (index) => (index + slides.length) % slides.length;
 
@@ -291,6 +307,21 @@ window.Sonia.initHome = function () {
 
   measureTextTrack();
   settleOnSlide(activeIndex);
+  scheduleRuntimeRefresh();
+
+  const imageLoadHandlers = mediaImages
+    .map((image) => {
+      if (image.complete) return null;
+
+      const onImageLoad = () => {
+        onResize();
+        scheduleRuntimeRefresh();
+      };
+
+      image.addEventListener("load", onImageLoad);
+      return { image, onImageLoad };
+    })
+    .filter(Boolean);
 
   window.addEventListener("resize", onResize);
 
@@ -319,6 +350,14 @@ window.Sonia.initHome = function () {
       currentTimeline.kill();
       currentTimeline = null;
     }
+
+    imageLoadHandlers.forEach(({ image, onImageLoad }) => {
+      image.removeEventListener("load", onImageLoad);
+    });
+
+    refreshTimeoutIds.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
 
     workSection.dataset.homeInitialized = "false";
   };
