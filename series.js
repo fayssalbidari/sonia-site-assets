@@ -308,6 +308,66 @@ window.Sonia.initSeries = function () {
   if (trigger && nextLink) {
     let isNavigatingToNextSeries = false;
     let nextSeriesObserver = null;
+    let nextSeriesTimeline = null;
+    const nextSeriesLoader = document.querySelector(".serie-next__loader");
+    const nextSeriesSignature = nextSeriesLoader?.querySelector('[data-element="signature"]');
+    const nextSeriesPaths = nextSeriesSignature
+      ? Array.from(nextSeriesSignature.querySelectorAll(".mask path")).sort(
+          (a, b) => a.getBBox().x - b.getBBox().x
+        )
+      : [];
+
+    const prepareNextSeriesPaths = () => {
+      nextSeriesPaths.forEach((path) => {
+        const length = path.getTotalLength();
+        path.style.strokeDasharray = `${length} ${length}`;
+        path.style.strokeDashoffset = `${length}`;
+      });
+    };
+
+    const hideNextSeriesLoader = () => {
+      if (!nextSeriesLoader || !nextSeriesSignature) return;
+      gsap.set(nextSeriesLoader, { autoAlpha: 0 });
+      gsap.set(nextSeriesSignature, { autoAlpha: 0 });
+    };
+
+    const showNextSeriesLoader = () => {
+      if (!nextSeriesLoader || !nextSeriesSignature) return;
+      gsap.set(nextSeriesLoader, { autoAlpha: 1 });
+      gsap.set(nextSeriesSignature, { autoAlpha: 1 });
+    };
+
+    const animateNextSeriesThenNavigate = () => {
+      if (!nextSeriesLoader || !nextSeriesSignature || !nextSeriesPaths.length) {
+        goToNextSeries();
+        return;
+      }
+
+      if (nextSeriesTimeline) {
+        nextSeriesTimeline.kill();
+      }
+
+      showNextSeriesLoader();
+      prepareNextSeriesPaths();
+
+      const totalDuration = 1.8;
+      const orderedPaths = [...nextSeriesPaths];
+      const pathDuration = totalDuration / orderedPaths.length;
+
+      nextSeriesTimeline = gsap.timeline({
+        onComplete: () => {
+          goToNextSeries();
+        }
+      });
+
+      orderedPaths.forEach((path, index) => {
+        nextSeriesTimeline.to(path, {
+          strokeDashoffset: 0,
+          duration: pathDuration,
+          ease: "none"
+        }, index * pathDuration);
+      });
+    };
 
     const goToNextSeries = () => {
       if (isNavigatingToNextSeries) return;
@@ -338,13 +398,13 @@ window.Sonia.initSeries = function () {
 
     const onNextLinkClick = (event) => {
       event.preventDefault();
-      goToNextSeries();
+      animateNextSeriesThenNavigate();
     };
 
     const onTriggerClick = (event) => {
       if (event.target.closest(".serie-slider__link")) return;
       event.preventDefault();
-      goToNextSeries();
+      animateNextSeriesThenNavigate();
     };
 
     nextLink.addEventListener("click", onNextLinkClick);
@@ -356,7 +416,7 @@ window.Sonia.initSeries = function () {
           const entry = entries[0];
           if (!entry || !entry.isIntersecting) return;
           if (entry.intersectionRatio < 0.98) return;
-          goToNextSeries();
+          animateNextSeriesThenNavigate();
         },
         {
           threshold: [0.98, 1]
@@ -366,10 +426,14 @@ window.Sonia.initSeries = function () {
       nextSeriesObserver.observe(trigger);
     }
 
+    hideNextSeriesLoader();
+    prepareNextSeriesPaths();
+
     cleanupFns.push(() => {
       nextLink.removeEventListener("click", onNextLinkClick);
       trigger.removeEventListener("click", onTriggerClick);
       nextSeriesObserver?.disconnect();
+      nextSeriesTimeline?.kill();
     });
   }
 
