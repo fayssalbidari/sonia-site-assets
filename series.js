@@ -312,7 +312,7 @@ window.Sonia.initSeries = function () {
   if (trigger && nextLink) {
     let isNavigatingToNextSeries = false;
     let nextSeriesTimeline = null;
-    let hasReachedSeriesBottom = false;
+    let isNextSeriesPrimed = false;
     const nextSeriesLoader = pageRoot.querySelector(".serie-next__loader");
     const nextSeriesSignature = nextSeriesLoader?.querySelector('[data-element="signature"]');
     const nextSeriesPaths = nextSeriesSignature
@@ -342,6 +342,8 @@ window.Sonia.initSeries = function () {
     };
 
     const animateNextSeriesThenNavigate = () => {
+      if (isNavigatingToNextSeries) return;
+
       if (!nextSeriesLoader || !nextSeriesSignature || !nextSeriesPaths.length) {
         goToNextSeries();
         return;
@@ -371,6 +373,18 @@ window.Sonia.initSeries = function () {
           ease: "none"
         }, index * pathDuration);
       });
+    };
+
+    const cancelNextSeriesAnimation = () => {
+      if (isNavigatingToNextSeries) return;
+
+      if (nextSeriesTimeline) {
+        nextSeriesTimeline.kill();
+        nextSeriesTimeline = null;
+      }
+
+      hideNextSeriesLoader();
+      prepareNextSeriesPaths();
     };
 
     const goToNextSeries = () => {
@@ -415,15 +429,20 @@ window.Sonia.initSeries = function () {
     trigger.addEventListener("click", onTriggerClick);
 
     const onNextSeriesScroll = () => {
-      if (hasReachedSeriesBottom) return;
-
       const scrollBottom = window.scrollY + window.innerHeight;
       const documentBottom = document.documentElement.scrollHeight;
+      const isAtBottom = scrollBottom >= documentBottom - 24;
 
-      if (scrollBottom < documentBottom - 24) return;
+      if (isAtBottom && !isNextSeriesPrimed) {
+        isNextSeriesPrimed = true;
+        animateNextSeriesThenNavigate();
+        return;
+      }
 
-      hasReachedSeriesBottom = true;
-      animateNextSeriesThenNavigate();
+      if (!isAtBottom && isNextSeriesPrimed) {
+        isNextSeriesPrimed = false;
+        cancelNextSeriesAnimation();
+      }
     };
 
     window.addEventListener("scroll", onNextSeriesScroll, { passive: true });
