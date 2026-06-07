@@ -1,8 +1,12 @@
-(function () {
+window.Sonia = window.Sonia || {};
+
+window.Sonia.initOeuvres = function () {
   if (typeof gsap === "undefined") return;
 
   const sections = Array.from(document.querySelectorAll(".product-reco__section"));
   if (!sections.length) return;
+
+  const instances = [];
 
   sections.forEach((section) => {
     if (section.dataset.recoSliderInitialized === "true") return;
@@ -34,6 +38,7 @@
     let lastPointerX = 0;
     let lastPointerTime = 0;
     let releaseTimeout = null;
+    let resizeObserver = null;
 
     const clamp = (value) => Math.max(minX, Math.min(maxX, value));
     const formatTwoDigits = (value) => String(value).padStart(2, "0");
@@ -195,21 +200,27 @@
       window.addEventListener("pointercancel", endDrag);
     };
 
-    links.forEach((link) => {
-      link.addEventListener("click", (event) => {
+    const onResize = () => {
+      updateBounds();
+    };
+
+    const linkHandlers = links.map((link) => {
+      const onClick = (event) => {
         if (!hasDragged) return;
         event.preventDefault();
         event.stopPropagation();
-      });
+      };
+
+      link.addEventListener("click", onClick);
+      return { link, onClick };
     });
 
     viewport.addEventListener("wheel", onWheel, { passive: false });
     track.addEventListener("pointerdown", onPointerDown);
-
-    window.addEventListener("resize", updateBounds);
+    window.addEventListener("resize", onResize);
 
     if ("ResizeObserver" in window) {
-      const resizeObserver = new ResizeObserver(updateBounds);
+      resizeObserver = new ResizeObserver(updateBounds);
       resizeObserver.observe(viewport);
       resizeObserver.observe(track);
     }
@@ -217,7 +228,58 @@
     syncSeriesMeta();
     gsap.ticker.add(tick);
     updateBounds();
+
+    instances.push({
+      section,
+      viewport,
+      track,
+      tick,
+      onWheel,
+      onPointerDown,
+      onResize,
+      onPointerMove,
+      endDrag,
+      linkHandlers,
+      resizeObserver,
+      releaseTimeout
+    });
   });
 
+  window.Sonia._oeuvresInstances = instances;
+
   console.log("oeuvres real loaded");
-})();
+};
+
+window.Sonia.destroyOeuvres = function () {
+  const instances = window.Sonia._oeuvresInstances || [];
+
+  instances.forEach((instance) => {
+    instance.viewport.removeEventListener("wheel", instance.onWheel);
+    instance.track.removeEventListener("pointerdown", instance.onPointerDown);
+    window.removeEventListener("resize", instance.onResize);
+    window.removeEventListener("pointermove", instance.onPointerMove);
+    window.removeEventListener("pointerup", instance.endDrag);
+    window.removeEventListener("pointercancel", instance.endDrag);
+
+    instance.linkHandlers.forEach(({ link, onClick }) => {
+      link.removeEventListener("click", onClick);
+    });
+
+    if (instance.resizeObserver) {
+      instance.resizeObserver.disconnect();
+    }
+
+    if (instance.releaseTimeout) {
+      window.clearTimeout(instance.releaseTimeout);
+    }
+
+    gsap.ticker.remove(instance.tick);
+    instance.section.dataset.recoSliderInitialized = "false";
+  });
+
+  window.Sonia._oeuvresInstances = [];
+};
+
+if (document.querySelector(".product-reco__section")) {
+  window.Sonia.initOeuvres();
+}
