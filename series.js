@@ -1,10 +1,14 @@
 window.Sonia = window.Sonia || {};
 
 window.Sonia.initSeries = function () {
+  const seriesContainers = Array.from(
+    document.querySelectorAll('[data-barba="container"][data-barba-namespace="series"]')
+  );
+  const pageRoot = seriesContainers.at(-1) || document;
   const hasSeriesPage =
-    document.querySelector('[data-sync="series-gallery"]') ||
-    document.querySelector('[data-series-next-trigger]') ||
-    document.querySelector('[data-series-layout="next"]');
+    pageRoot.querySelector('[data-sync="series-gallery"]') ||
+    pageRoot.querySelector('[data-series-next-trigger]') ||
+    pageRoot.querySelector('[data-series-layout="next"]');
 
   if (!hasSeriesPage) return;
   if (window.Sonia._seriesInitialized === true) return;
@@ -29,16 +33,16 @@ window.Sonia.initSeries = function () {
     refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 360));
   };
 
-  const root = document.querySelector('[data-sync="series-gallery"]');
+  const root = pageRoot.querySelector('[data-sync="series-gallery"]');
 
   if (root && root.dataset.seriesGalleryInitialized !== "true") {
     root.dataset.seriesGalleryInitialized = "true";
 
     const track = root.querySelector('[data-sync-track]');
     const texts = Array.from(root.querySelectorAll('[data-sync-text]'));
-    const images = Array.from(document.querySelectorAll('[data-sync-image]'));
+    const images = Array.from(pageRoot.querySelectorAll('[data-sync-image]'));
     const mediaImages = Array.from(
-      document.querySelectorAll('[data-sync-image] img, .serie-slider__img')
+      pageRoot.querySelectorAll('[data-sync-image] img, .serie-slider__img')
     );
     const currentEl = root.querySelector('[data-sync-current]');
     const totalEl = root.querySelector('[data-sync-total]');
@@ -161,8 +165,8 @@ window.Sonia.initSeries = function () {
     }
   }
 
-  const nextLayout = document.querySelector('[data-series-layout="next"]');
-  const trigger = document.querySelector('[data-series-next-trigger]');
+  const nextLayout = pageRoot.querySelector('[data-series-layout="next"]');
+  const trigger = pageRoot.querySelector('[data-series-next-trigger]');
 
   if (
     trigger &&
@@ -206,7 +210,7 @@ window.Sonia.initSeries = function () {
     }
   }
 
-  const nextLink = document.querySelector(".serie-slider__link");
+  const nextLink = pageRoot.querySelector(".serie-slider__link");
 
   if (
     nextLink &&
@@ -229,7 +233,7 @@ window.Sonia.initSeries = function () {
     }
 
     const seriesMeta = new Map();
-    const metaEntries = Array.from(document.querySelectorAll("[data-series-meta-entry]"));
+    const metaEntries = Array.from(pageRoot.querySelectorAll("[data-series-meta-entry]"));
 
     metaEntries.forEach((entry) => {
       const slug = normalize(entry.getAttribute("data-series-meta-slug"));
@@ -309,7 +313,7 @@ window.Sonia.initSeries = function () {
     let isNavigatingToNextSeries = false;
     let nextSeriesTimeline = null;
     let hasReachedSeriesBottom = false;
-    const nextSeriesLoader = document.querySelector(".serie-next__loader");
+    const nextSeriesLoader = pageRoot.querySelector(".serie-next__loader");
     const nextSeriesSignature = nextSeriesLoader?.querySelector('[data-element="signature"]');
     const nextSeriesPaths = nextSeriesSignature
       ? Array.from(nextSeriesSignature.querySelectorAll(".mask path")).sort(
