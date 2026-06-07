@@ -1,6 +1,12 @@
 window.Sonia = window.Sonia || {};
 
 window.Sonia.initSeries = function () {
+  const hasSeriesPage =
+    document.querySelector('[data-sync="series-gallery"]') ||
+    document.querySelector('[data-series-next-trigger]') ||
+    document.querySelector('[data-series-layout="next"]');
+
+  if (!hasSeriesPage) return;
   if (window.Sonia._seriesInitialized === true) return;
   window.Sonia._seriesInitialized = true;
 
@@ -419,8 +425,6 @@ window.Sonia.initSeries = function () {
   }
 
   window.Sonia._seriesCleanup = cleanupFns;
-
-  console.log("series real loaded");
 };
 
 window.Sonia.destroySeries = function () {
@@ -431,11 +435,3 @@ window.Sonia.destroySeries = function () {
   window.Sonia._seriesCleanup = [];
   window.Sonia._seriesInitialized = false;
 };
-
-if (
-  document.querySelector('[data-sync="series-gallery"]') ||
-  document.querySelector('[data-series-next-trigger]') ||
-  document.querySelector('[data-series-layout="next"]')
-) {
-  window.Sonia.initSeries();
-}

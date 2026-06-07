@@ -2,7 +2,12 @@ window.Sonia = window.Sonia || {};
 
 window.Sonia.initHome = function () {
   const { gsap } = window;
-  if (!gsap) return;
+  const hasHomePage =
+    document.querySelector(".page-home") &&
+    document.querySelector('[data-home-sync="gallery"]') &&
+    document.querySelector('[data-work="section"]');
+
+  if (!gsap || !hasHomePage) return;
 
   const workSection = document.querySelector('[data-work="section"]');
   const workItems = Array.from(document.querySelectorAll('[data-work="item"]'));
@@ -296,7 +301,7 @@ window.Sonia.initHome = function () {
     workSection.addEventListener("touchend", onTouchEnd, { passive: true });
   }
 
-  window.addEventListener("touchmove", preventNativeScroll, { passive: false });
+  workSection.addEventListener("touchmove", preventNativeScroll, { passive: false });
 
   window.Sonia.destroyHome = function () {
     window.removeEventListener("resize", onResize);
@@ -308,7 +313,7 @@ window.Sonia.initHome = function () {
       workSection.removeEventListener("touchend", onTouchEnd);
     }
 
-    window.removeEventListener("touchmove", preventNativeScroll);
+    workSection.removeEventListener("touchmove", preventNativeScroll);
 
     if (currentTimeline) {
       currentTimeline.kill();
@@ -318,9 +323,4 @@ window.Sonia.initHome = function () {
     workSection.dataset.homeInitialized = "false";
   };
 
-  console.log("home real loaded");
 };
-
-if (document.querySelector('[data-home-sync="gallery"]')) {
-  window.Sonia.initHome();
-}

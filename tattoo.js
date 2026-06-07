@@ -29,8 +29,6 @@ window.Sonia.initTattoo = function () {
   if (!section) return;
   if (section.dataset.tattooInitialized === "true") return;
 
-  section.dataset.tattooInitialized = "true";
-
   const container = section.querySelector(selectors.container);
   const content = container?.querySelector(selectors.sourceContent);
   const overlay = document.querySelector(selectors.overlay);
@@ -43,6 +41,7 @@ window.Sonia.initTattoo = function () {
     typeof Observer === "undefined"
   ) return;
 
+  section.dataset.tattooInitialized = "true";
   window.Sonia._tattooInitialized = true;
 
   const cleanupFns = [];
@@ -1039,8 +1038,6 @@ window.Sonia.initTattoo = function () {
   setOverlayInitialState();
 
   window.Sonia._tattooCleanup = cleanupFns;
-
-  console.log("tattoo real loaded");
 };
 
 window.Sonia.destroyTattoo = function () {
@@ -1051,7 +1048,3 @@ window.Sonia.destroyTattoo = function () {
   window.Sonia._tattooCleanup = [];
   window.Sonia._tattooInitialized = false;
 };
-
-if (document.querySelector(".mwg_effect026")) {
-  window.Sonia.initTattoo();
-}
