@@ -1,6 +1,6 @@
-console.log("home loaded");
+window.Sonia = window.Sonia || {};
 
-(function () {
+window.Sonia.initHome = function () {
   const { gsap } = window;
   if (!gsap) return;
 
@@ -8,7 +8,6 @@ console.log("home loaded");
   const workItems = Array.from(document.querySelectorAll('[data-work="item"]'));
   const syncRoot = document.querySelector('[data-home-sync="gallery"]');
 
-  if (!document.querySelector(".page-home")) return;
   if (!workSection || !workItems.length || !syncRoot) return;
   if (workSection.dataset.homeInitialized === "true") return;
 
@@ -249,52 +248,79 @@ console.log("home loaded");
     }
   }
 
-  measureTextTrack();
-  settleOnSlide(activeIndex);
-
-  window.addEventListener("resize", () => {
+  const onResize = () => {
     measureTextTrack();
     const activeId = slides[activeIndex]?.id;
     syncTextById(activeId);
     syncMeta(activeId);
-  });
+  };
+
+  const onWheel = (event) => {
+    event.preventDefault();
+    if (Math.abs(event.deltaY) < wheelThreshold) return;
+    goToSlide(event.deltaY > 0 ? 1 : -1);
+  };
+
+  const onKeydown = (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      goToSlide(1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      goToSlide(-1);
+    }
+  };
+
+  const onTouchStart = (event) => {
+    touchStartY = event.touches[0].clientY;
+  };
+
+  const onTouchEnd = (event) => {
+    const deltaY = touchStartY - event.changedTouches[0].clientY;
+    if (Math.abs(deltaY) < touchThreshold) return;
+    goToSlide(deltaY > 0 ? 1 : -1);
+  };
+
+  const preventNativeScroll = (event) => {
+    if (!event.cancelable) return;
+    event.preventDefault();
+  };
+
+  measureTextTrack();
+  settleOnSlide(activeIndex);
+
+  window.addEventListener("resize", onResize);
 
   if (!prefersReducedMotion) {
-    workSection.addEventListener("wheel", (event) => {
-      event.preventDefault();
-      if (Math.abs(event.deltaY) < wheelThreshold) return;
-      goToSlide(event.deltaY > 0 ? 1 : -1);
-    }, { passive: false });
-
-    window.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-        goToSlide(1);
-      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-        goToSlide(-1);
-      }
-    });
-
-    workSection.addEventListener("touchstart", (event) => {
-      touchStartY = event.touches[0].clientY;
-    }, { passive: true });
-
-    workSection.addEventListener("touchend", (event) => {
-      const deltaY = touchStartY - event.changedTouches[0].clientY;
-      if (Math.abs(deltaY) < touchThreshold) return;
-      goToSlide(deltaY > 0 ? 1 : -1);
-    }, { passive: true });
+    workSection.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("keydown", onKeydown);
+    workSection.addEventListener("touchstart", onTouchStart, { passive: true });
+    workSection.addEventListener("touchend", onTouchEnd, { passive: true });
   }
 
-  if (document.documentElement.dataset.homeTouchLock !== "true") {
-    document.documentElement.dataset.homeTouchLock = "true";
+  window.addEventListener("touchmove", preventNativeScroll, { passive: false });
 
-    const preventNativeScroll = (event) => {
-      if (!event.cancelable) return;
-      event.preventDefault();
-    };
+  window.Sonia.destroyHome = function () {
+    window.removeEventListener("resize", onResize);
 
-    window.addEventListener("touchmove", preventNativeScroll, { passive: false });
-  }
+    if (!prefersReducedMotion) {
+      workSection.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKeydown);
+      workSection.removeEventListener("touchstart", onTouchStart);
+      workSection.removeEventListener("touchend", onTouchEnd);
+    }
+
+    window.removeEventListener("touchmove", preventNativeScroll);
+
+    if (currentTimeline) {
+      currentTimeline.kill();
+      currentTimeline = null;
+    }
+
+    workSection.dataset.homeInitialized = "false";
+  };
 
   console.log("home real loaded");
-})();
+};
+
+if (document.querySelector('[data-home-sync="gallery"]')) {
+  window.Sonia.initHome();
+}
