@@ -1,12 +1,32 @@
 (function () {
+  console.log("site-core file loaded");
+
   const init = () => {
+    console.log("site-core init called");
+
     const navbar = document.querySelector(".navbar");
     const mobileToggle = document.querySelector(".navbar__menu-mobile");
     const mobileMenu = document.querySelector(".navbar__menu-links");
+    const hasGsap = typeof window.gsap !== "undefined";
 
-    if (!navbar || !mobileToggle || !mobileMenu || typeof gsap === "undefined") return;
-    if (navbar.dataset.navInitialized === "true") return;
+    console.log("site-core state", {
+      navbar: !!navbar,
+      mobileToggle: !!mobileToggle,
+      mobileMenu: !!mobileMenu,
+      hasGsap
+    });
 
+    if (!navbar || !mobileToggle || !mobileMenu || !hasGsap) {
+      console.log("site-core guard blocked init");
+      return;
+    }
+
+    if (navbar.dataset.navInitialized === "true") {
+      console.log("site-core already initialized");
+      return;
+    }
+
+    const { gsap } = window;
     navbar.dataset.navInitialized = "true";
 
     const isMobile = () => window.innerWidth <= 767;
@@ -43,6 +63,8 @@
     };
 
     const openMenu = () => {
+      console.log("openMenu called", { isMobile: isMobile(), isMenuOpen });
+
       if (!isMobile() || isMenuOpen) return;
 
       menuTween?.kill();
@@ -72,6 +94,8 @@
     };
 
     const closeMenu = () => {
+      console.log("closeMenu called", { isMobile: isMobile(), isMenuOpen });
+
       if (!isMobile() || !isMenuOpen) return;
 
       menuTween?.kill();
@@ -101,6 +125,7 @@
 
     const toggleMenu = (event) => {
       event.preventDefault();
+      console.log("toggleMenu click");
 
       if (!isMobile()) return;
 
@@ -153,6 +178,8 @@
         clearProps: "transform,visibility,pointerEvents"
       });
     }
+
+    console.log("site-core nav initialized");
   };
 
   if (document.readyState === "loading") {
