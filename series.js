@@ -23,7 +23,6 @@ window.Sonia.initSeries = function () {
     window.ScrollTrigger?.refresh?.();
   };
 
-  const refreshTimeoutIds = [];
   const scheduleRuntimeRefresh = () => {
     if (document.body.dataset.barbaTransition === "active") return;
 
@@ -470,13 +469,6 @@ window.Sonia.initSeries = function () {
       nextSeriesTimeline?.kill();
     });
   }
-
-  cleanupFns.push(() => {
-    refreshTimeoutIds.forEach((timeoutId) => {
-      window.clearTimeout(timeoutId);
-    });
-  });
-
   window.Sonia._seriesCleanup = cleanupFns;
 };
 

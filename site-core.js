@@ -194,8 +194,6 @@ window.Sonia.initSiteCore = function () {
   window.Sonia._siteCoreCleanup = cleanupFns;
   window.Sonia._siteCoreNavbar = navbar;
   window.Sonia._siteCoreContainer = pageRoot;
-
-  console.log("site-core real loaded");
 };
 
 window.Sonia.destroySiteCore = function () {

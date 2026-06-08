@@ -2,16 +2,20 @@ window.Sonia = window.Sonia || {};
 
 window.Sonia.initHome = function () {
   const { gsap } = window;
-  const homeRoot = document.querySelector(".page-home");
+  const homeContainers = Array.from(
+    document.querySelectorAll('[data-barba="container"][data-barba-namespace="home"]')
+  );
+  const pageRoot = homeContainers.at(-1) || document;
+  const homeRoot = pageRoot.querySelector(".page-home");
   const hasHomePage =
     homeRoot &&
     homeRoot.querySelector('[data-home-sync="gallery"]') &&
-    document.querySelector('[data-work="section"]');
+    pageRoot.querySelector('[data-work="section"]');
 
   if (!gsap || !hasHomePage) return;
 
-  const workSection = document.querySelector('[data-work="section"]');
-  const workItems = Array.from(document.querySelectorAll('[data-work="item"]'));
+  const workSection = pageRoot.querySelector('[data-work="section"]');
+  const workItems = Array.from(pageRoot.querySelectorAll('[data-work="item"]'));
   const syncRoot = homeRoot.querySelector('[data-home-sync="gallery"]');
 
   if (!workSection || !workItems.length || !syncRoot) return;
@@ -34,7 +38,6 @@ window.Sonia.initHome = function () {
     window.ScrollTrigger?.refresh?.();
   };
 
-  const refreshTimeoutIds = [];
   const scheduleRuntimeRefresh = () => {
     if (document.body.dataset.barbaTransition === "active") return;
 
@@ -354,11 +357,6 @@ window.Sonia.initHome = function () {
     imageLoadHandlers.forEach(({ image, onImageLoad }) => {
       image.removeEventListener("load", onImageLoad);
     });
-
-    refreshTimeoutIds.forEach((timeoutId) => {
-      window.clearTimeout(timeoutId);
-    });
-
     workSection.dataset.homeInitialized = "false";
   };
 
