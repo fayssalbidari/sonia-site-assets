@@ -312,6 +312,8 @@ window.Sonia.initSeries = function () {
     let isNavigatingToNextSeries = false;
     let nextSeriesTimeline = null;
     let isNextSeriesPrimed = false;
+    let autoNextArmed = false;
+    const initialScrollY = window.scrollY;
     const nextSeriesLoader = pageRoot.querySelector(".serie-next__loader");
     const nextSeriesSignature = nextSeriesLoader?.querySelector('[data-element="signature"]');
     const nextSeriesPaths = nextSeriesSignature
@@ -430,6 +432,11 @@ window.Sonia.initSeries = function () {
 
     const onNextSeriesScroll = () => {
       if (document.body.dataset.barbaTransition === "active") return;
+
+      if (!autoNextArmed) {
+        if (Math.abs(window.scrollY - initialScrollY) <= 8) return;
+        autoNextArmed = true;
+      }
 
       const scrollBottom = window.scrollY + window.innerHeight;
       const documentBottom = document.documentElement.scrollHeight;
