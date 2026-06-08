@@ -341,6 +341,7 @@ window.Sonia.initSeries = function () {
     };
 
     const animateNextSeriesThenNavigate = () => {
+      if (document.body.dataset.barbaTransition === "active") return;
       if (isNavigatingToNextSeries) return;
 
       if (!nextSeriesLoader || !nextSeriesSignature || !nextSeriesPaths.length) {
@@ -428,6 +429,8 @@ window.Sonia.initSeries = function () {
     trigger.addEventListener("click", onTriggerClick);
 
     const onNextSeriesScroll = () => {
+      if (document.body.dataset.barbaTransition === "active") return;
+
       const scrollBottom = window.scrollY + window.innerHeight;
       const documentBottom = document.documentElement.scrollHeight;
       const isAtBottom = scrollBottom >= documentBottom - 24;
@@ -448,7 +451,10 @@ window.Sonia.initSeries = function () {
 
     hideNextSeriesLoader();
     prepareNextSeriesPaths();
-    onNextSeriesScroll();
+
+    if (document.body.dataset.barbaTransition !== "active") {
+      onNextSeriesScroll();
+    }
 
     cleanupFns.push(() => {
       nextLink.removeEventListener("click", onNextLinkClick);
