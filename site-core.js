@@ -1,8 +1,12 @@
 window.Sonia = window.Sonia || {};
 
-window.Sonia.initSiteCore = function () {
+const getLatestBarbaContainer = () => {
   const containers = Array.from(document.querySelectorAll('[data-barba="container"]'));
-  const pageRoot = containers.at(-1) || document;
+  return containers.at(-1) || null;
+};
+
+window.Sonia.initSiteCore = function () {
+  const pageRoot = getLatestBarbaContainer() || document;
   const navbar = pageRoot.querySelector(".navbar");
   const mobileToggle = pageRoot.querySelector(".navbar__menu-mobile");
   const mobileMenu = pageRoot.querySelector(".navbar__menu-links");
@@ -189,6 +193,9 @@ window.Sonia.initSiteCore = function () {
 
   window.Sonia._siteCoreCleanup = cleanupFns;
   window.Sonia._siteCoreNavbar = navbar;
+  window.Sonia._siteCoreContainer = pageRoot;
+
+  console.log("site-core real loaded");
 };
 
 window.Sonia.destroySiteCore = function () {
@@ -199,9 +206,41 @@ window.Sonia.destroySiteCore = function () {
 
   window.Sonia._siteCoreCleanup = [];
   window.Sonia._siteCoreNavbar = null;
+  window.Sonia._siteCoreContainer = null;
 };
 
 (function () {
+  const watchContainers = () => {
+    if (window.Sonia._siteCoreContainerObserverBound) return;
+    window.Sonia._siteCoreContainerObserverBound = true;
+
+    let queued = false;
+
+    const syncToLatestContainer = () => {
+      queued = false;
+
+      const latestContainer = getLatestBarbaContainer();
+      if (!latestContainer) return;
+      if (window.Sonia._siteCoreContainer === latestContainer) return;
+
+      window.Sonia.destroySiteCore?.();
+      window.Sonia.initSiteCore?.();
+    };
+
+    const observer = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(syncToLatestContainer);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    window.Sonia._siteCoreContainerObserver = observer;
+  };
+
   const bindBarbaHooks = () => {
     if (window.Sonia._siteCoreBarbaHooksBound) return;
     if (!window.barba?.hooks) {
@@ -222,6 +261,7 @@ window.Sonia.destroySiteCore = function () {
 
   const boot = () => {
     window.Sonia.initSiteCore?.();
+    watchContainers();
     bindBarbaHooks();
   };
 
