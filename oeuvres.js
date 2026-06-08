@@ -3,14 +3,17 @@ window.Sonia = window.Sonia || {};
 window.Sonia.initOeuvres = function () {
   if (typeof gsap === "undefined") return;
 
-  const sections = Array.from(document.querySelectorAll(".product-reco__section"));
+  const oeuvresContainers = Array.from(
+    document.querySelectorAll('[data-barba="container"][data-barba-namespace="oeuvres"]')
+  );
+  const pageRoot = oeuvresContainers.at(-1) || document;
+  const sections = Array.from(pageRoot.querySelectorAll(".product-reco__section"));
   if (!sections.length) return;
 
   const instances = [];
 
   sections.forEach((section) => {
     if (section.dataset.recoSliderInitialized === "true") return;
-    section.dataset.recoSliderInitialized = "true";
 
     const viewport = section.querySelector(".product-reco__slider");
     const track = section.querySelector(".poster-reco__slider");
@@ -18,6 +21,8 @@ window.Sonia.initOeuvres = function () {
     const items = Array.from(section.querySelectorAll(".poster-reco__wrapper"));
 
     if (!viewport || !track) return;
+
+    section.dataset.recoSliderInitialized = "true";
 
     const yearStartEl = section.querySelector("[data-reco-year-start-display]");
     const yearSeparatorEl = section.querySelector("[data-reco-year-separator]");
@@ -241,7 +246,7 @@ window.Sonia.initOeuvres = function () {
       endDrag,
       linkHandlers,
       resizeObserver,
-      releaseTimeout
+      getReleaseTimeout: () => releaseTimeout
     });
   });
 
@@ -267,8 +272,9 @@ window.Sonia.destroyOeuvres = function () {
       instance.resizeObserver.disconnect();
     }
 
-    if (instance.releaseTimeout) {
-      window.clearTimeout(instance.releaseTimeout);
+    const releaseTimeout = instance.getReleaseTimeout?.();
+    if (releaseTimeout) {
+      window.clearTimeout(releaseTimeout);
     }
 
     gsap.ticker.remove(instance.tick);

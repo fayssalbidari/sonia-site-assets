@@ -232,8 +232,7 @@ window.Sonia.destroySiteCore = function () {
     });
 
     observer.observe(document.body, {
-      childList: true,
-      subtree: true
+      childList: true
     });
 
     window.Sonia._siteCoreContainerObserver = observer;

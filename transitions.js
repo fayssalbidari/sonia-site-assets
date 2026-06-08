@@ -1,5 +1,5 @@
 
-  window.lenis = new Lenis({
+  window.lenis = window.lenis || new Lenis({
     autoRaf: true
   });
 
@@ -9,9 +9,15 @@
   const hasScrollTrigger = typeof window.ScrollTrigger !== "undefined";
   let loaderCoverPromise = Promise.resolve();
   let loaderMiddlePromise = Promise.resolve();
+  let cachedLoaderEls = null;
+  let cachedSignaturePaths = null;
 
   function getLoaderEls() {
-    return {
+    if (cachedLoaderEls?.root?.isConnected) {
+      return cachedLoaderEls;
+    }
+
+    cachedLoaderEls = {
       root: document.querySelector(".loader-container"),
       bg: document.querySelector(".loader-background"),
       wrap: document.querySelector(".loader-wrapper"),
@@ -20,15 +26,24 @@
       progress: document.querySelector('[data-element="progress"]'),
       signature: document.querySelector('[data-element="signature"]')
     };
+
+    cachedSignaturePaths = null;
+    return cachedLoaderEls;
   }
 
   function getSignaturePaths() {
     const { signature } = getLoaderEls();
     if (!signature) return [];
 
-    return Array.from(signature.querySelectorAll("path")).sort(
+    if (cachedSignaturePaths?.length && cachedSignaturePaths.every((path) => path.isConnected)) {
+      return cachedSignaturePaths;
+    }
+
+    cachedSignaturePaths = Array.from(signature.querySelectorAll("path")).sort(
       (a, b) => a.getBBox().x - b.getBBox().x
     );
+
+    return cachedSignaturePaths;
   }
 
   function formatProgress(value) {

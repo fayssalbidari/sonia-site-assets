@@ -3,6 +3,11 @@ window.Sonia = window.Sonia || {};
 window.Sonia.initTattoo = function () {
   if (window.Sonia._tattooInitialized === true) return;
 
+  const tattooContainers = Array.from(
+    document.querySelectorAll('[data-barba="container"][data-barba-namespace="tattoo"]')
+  );
+  const pageRoot = tattooContainers.at(-1) || document;
+
   const selectors = {
     section: ".mwg_effect026",
     container: ".container",
@@ -25,13 +30,13 @@ window.Sonia.initTattoo = function () {
     slotCover: ".media-overlay__cover"
   };
 
-  const section = document.querySelector(selectors.section);
+  const section = pageRoot.querySelector(selectors.section);
   if (!section) return;
   if (section.dataset.tattooInitialized === "true") return;
 
   const container = section.querySelector(selectors.container);
   const content = container?.querySelector(selectors.sourceContent);
-  const overlay = document.querySelector(selectors.overlay);
+  const overlay = pageRoot.querySelector(selectors.overlay);
 
   if (
     !container ||
@@ -40,9 +45,6 @@ window.Sonia.initTattoo = function () {
     typeof gsap === "undefined" ||
     typeof Observer === "undefined"
   ) return;
-
-  section.dataset.tattooInitialized = "true";
-  window.Sonia._tattooInitialized = true;
 
   const cleanupFns = [];
   const overlayPanel = overlay.querySelector(selectors.overlayPanel);
@@ -55,7 +57,7 @@ window.Sonia.initTattoo = function () {
   const closeButton = overlay.querySelector(selectors.closeButton);
   const previousButton = overlay.querySelector(selectors.previousButton);
   const nextButton = overlay.querySelector(selectors.nextButton);
-  const filterButtons = Array.from(document.querySelectorAll(selectors.filterButtons));
+  const filterButtons = Array.from(pageRoot.querySelectorAll(selectors.filterButtons));
   const overlayNavs = Array.from(overlay.querySelectorAll(".tattoo-overlay__nav"));
 
   if (
@@ -68,6 +70,9 @@ window.Sonia.initTattoo = function () {
     !previousButton ||
     !nextButton
   ) return;
+
+  section.dataset.tattooInitialized = "true";
+  window.Sonia._tattooInitialized = true;
 
   const MOBILE_BREAKPOINT = 767;
   const isMobileGallery = () => window.innerWidth <= MOBILE_BREAKPOINT;
@@ -616,6 +621,16 @@ window.Sonia.initTattoo = function () {
 
   const mediaBindings = [];
 
+  const clearMediaBindings = () => {
+    mediaBindings.forEach(({ media, onClick, onKeydown }) => {
+      media.removeEventListener("click", onClick);
+      media.removeEventListener("keydown", onKeydown);
+      media.dataset.interactionsBound = "false";
+    });
+
+    mediaBindings.length = 0;
+  };
+
   const attachMediaInteractions = () => {
     medias.forEach((media, index) => {
       const normalizedIndex = mediaCount ? index % mediaCount : 0;
@@ -650,6 +665,7 @@ window.Sonia.initTattoo = function () {
 
   const rebuildGallery = () => {
     closeOverlay(true);
+    clearMediaBindings();
 
     if (isMobileGallery()) {
       const mobileItems = buildMobileItemsForFilter(activeFilter);
@@ -1019,11 +1035,7 @@ window.Sonia.initTattoo = function () {
   });
 
   cleanupFns.push(() => {
-    mediaBindings.forEach(({ media, onClick, onKeydown }) => {
-      media.removeEventListener("click", onClick);
-      media.removeEventListener("keydown", onKeydown);
-      media.dataset.interactionsBound = "false";
-    });
+    clearMediaBindings();
   });
 
   cleanupFns.push(() => {
