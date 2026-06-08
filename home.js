@@ -36,12 +36,11 @@ window.Sonia.initHome = function () {
 
   const refreshTimeoutIds = [];
   const scheduleRuntimeRefresh = () => {
+    if (document.body.dataset.barbaTransition === "active") return;
+
     requestAnimationFrame(() => {
       requestAnimationFrame(refreshRuntime);
     });
-
-    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 120));
-    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 360));
   };
 
   const textMap = new Map();

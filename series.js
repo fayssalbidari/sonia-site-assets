@@ -25,12 +25,11 @@ window.Sonia.initSeries = function () {
 
   const refreshTimeoutIds = [];
   const scheduleRuntimeRefresh = () => {
+    if (document.body.dataset.barbaTransition === "active") return;
+
     requestAnimationFrame(() => {
       requestAnimationFrame(refreshRuntime);
     });
-
-    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 120));
-    refreshTimeoutIds.push(window.setTimeout(refreshRuntime, 360));
   };
 
   const root = pageRoot.querySelector('[data-sync="series-gallery"]');
