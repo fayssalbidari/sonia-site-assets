@@ -43,10 +43,17 @@ window.Sonia.initSeries = function () {
     const mediaImages = Array.from(
       pageRoot.querySelectorAll('[data-sync-image] img, .serie-slider__img')
     );
+    const imageMotionTargets = Array.from(
+      pageRoot.querySelectorAll(
+        '[data-sync-image], [data-sync-image] .poster-image__wrapper, [data-sync-image] .poster-img, [data-sync-image] img, .serie-slider__img'
+      )
+    );
     const currentEl = root.querySelector('[data-sync-current]');
     const totalEl = root.querySelector('[data-sync-total]');
 
     if (track && texts.length && images.length) {
+      gsap.set(imageMotionTargets, { clearProps: "transform" });
+
       const textMap = new Map();
       texts.forEach((item, index) => {
         textMap.set(normalize(item.getAttribute("data-sync-id")), index);
@@ -279,6 +286,7 @@ window.Sonia.initSeries = function () {
         window.removeEventListener("scroll", onScroll);
         textTimeline?.kill();
         textOverlay?.remove();
+        gsap.set(imageMotionTargets, { clearProps: "transform" });
         gsap.set(track, { clearProps: "opacity,visibility" });
         imageLoadHandlers.forEach(({ image, onImageLoad }) => {
           image.removeEventListener("load", onImageLoad);
