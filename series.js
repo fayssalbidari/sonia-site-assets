@@ -43,6 +43,12 @@ window.Sonia.initSeries = function () {
     const mediaImages = Array.from(
       pageRoot.querySelectorAll('[data-sync-image] img, .serie-slider__img')
     );
+    const parallaxTargets = images.map((item) =>
+      item.querySelector(".poster-image__wrapper") ||
+      item.querySelector(".poster-img") ||
+      item.querySelector("img") ||
+      item
+    );
     const currentEl = root.querySelector('[data-sync-current]');
     const totalEl = root.querySelector('[data-sync-total]');
 
@@ -62,7 +68,7 @@ window.Sonia.initSeries = function () {
       let textOverlay = null;
       let activeTextNode = null;
       let textTimeline = null;
-      const parallaxMaxOffset = 6;
+      const parallaxMaxOffset = 32;
 
       const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -221,12 +227,23 @@ window.Sonia.initSeries = function () {
         ticking = false;
         const viewportCenter = window.innerHeight * 0.5;
 
-        mediaImages.forEach((image) => {
-          const rect = image.getBoundingClientRect();
+        parallaxTargets.forEach((target) => {
+          if (!target) return;
+
+          const rect = target.getBoundingClientRect();
           const center = rect.top + rect.height / 2;
           const normalizedDistance = (center - viewportCenter) / window.innerHeight;
           const offset = clamp(normalizedDistance * -parallaxMaxOffset, -parallaxMaxOffset, parallaxMaxOffset);
-          gsap.set(image, { yPercent: offset });
+          gsap.set(target, { y: offset });
+        });
+
+        mediaImages.forEach((image) => {
+          if (!image.closest('[data-sync-image]')) return;
+          const rect = image.getBoundingClientRect();
+          const center = rect.top + rect.height / 2;
+          const normalizedDistance = (center - viewportCenter) / window.innerHeight;
+          const scale = 1.02 + (1 - Math.abs(normalizedDistance)) * 0.015;
+          gsap.set(image, { scale });
         });
 
         const closestImage = getClosestImage();
@@ -291,6 +308,7 @@ window.Sonia.initSeries = function () {
         window.removeEventListener("scroll", onScroll);
         textTimeline?.kill();
         textOverlay?.remove();
+        gsap.set(parallaxTargets.filter(Boolean), { clearProps: "transform" });
         gsap.set(mediaImages, { clearProps: "transform" });
         gsap.set(track, { clearProps: "opacity,visibility" });
         imageLoadHandlers.forEach(({ image, onImageLoad }) => {
