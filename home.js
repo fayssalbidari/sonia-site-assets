@@ -88,12 +88,13 @@ window.Sonia.initHome = function () {
   let currentIncomingIndex = null;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const unlockThreshold = 0.7;
+  const unlockThreshold = 0.5;
   const wheelThreshold = 12;
   const touchThreshold = 40;
   const idleScale = 1.22;
   const idleOffset = 8;
   const travelOffset = 6;
+  const textTransitionDuration = 0.9;
 
   const slides = workItems.map((item) => ({
     item,
@@ -109,11 +110,18 @@ window.Sonia.initHome = function () {
     textItemHeight = syncTexts[0].getBoundingClientRect().height;
   }
 
-  function syncTextById(id) {
-    if (!syncTrack || !textMap.size || !textItemHeight) return;
+  function getTextTrackYById(id) {
+    if (!textMap.size || !textItemHeight) return null;
     const index = textMap.get(normalize(id));
-    if (typeof index !== "number") return;
-    syncTrack.style.transform = `translate3d(0, -${index * textItemHeight}px, 0)`;
+    if (typeof index !== "number") return null;
+    return -(index * textItemHeight);
+  }
+
+  function syncTextById(id) {
+    if (!syncTrack) return;
+    const y = getTextTrackYById(id);
+    if (y === null) return;
+    gsap.set(syncTrack, { y });
   }
 
   function syncMeta(id) {
@@ -245,7 +253,6 @@ window.Sonia.initHome = function () {
     }
 
     currentIncomingIndex = incomingIndex;
-    syncTextById(incomingSlide.id);
     syncMeta(incomingSlide.id);
 
     currentTimeline = gsap.timeline({
@@ -270,6 +277,15 @@ window.Sonia.initHome = function () {
         yPercent: 0
       }, 0);
     }
+
+    const incomingTextY = getTextTrackYById(incomingSlide.id);
+    if (incomingTextY !== null && syncTrack) {
+      currentTimeline.to(syncTrack, {
+        y: incomingTextY,
+        duration: textTransitionDuration,
+        ease: "power4.inOut"
+      }, 0);
+    }
   }
 
   const onResize = () => {
@@ -280,8 +296,8 @@ window.Sonia.initHome = function () {
   };
 
   const onWheel = (event) => {
-    event.preventDefault();
     if (Math.abs(event.deltaY) < wheelThreshold) return;
+    event.preventDefault();
     goToSlide(event.deltaY > 0 ? 1 : -1);
   };
 
@@ -301,11 +317,6 @@ window.Sonia.initHome = function () {
     const deltaY = touchStartY - event.changedTouches[0].clientY;
     if (Math.abs(deltaY) < touchThreshold) return;
     goToSlide(deltaY > 0 ? 1 : -1);
-  };
-
-  const preventNativeScroll = (event) => {
-    if (!event.cancelable) return;
-    event.preventDefault();
   };
 
   measureTextTrack();
@@ -335,8 +346,6 @@ window.Sonia.initHome = function () {
     workSection.addEventListener("touchend", onTouchEnd, { passive: true });
   }
 
-  workSection.addEventListener("touchmove", preventNativeScroll, { passive: false });
-
   window.Sonia.destroyHome = function () {
     window.removeEventListener("resize", onResize);
 
@@ -346,8 +355,6 @@ window.Sonia.initHome = function () {
       workSection.removeEventListener("touchstart", onTouchStart);
       workSection.removeEventListener("touchend", onTouchEnd);
     }
-
-    workSection.removeEventListener("touchmove", preventNativeScroll);
 
     if (currentTimeline) {
       currentTimeline.kill();
