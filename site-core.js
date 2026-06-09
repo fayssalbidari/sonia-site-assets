@@ -27,6 +27,8 @@ window.Sonia.initSiteCore = function () {
 
   const getClosedY = () => window.innerHeight + 40;
   const menuTextOffset = 18;
+  const menuRevealDuration = 0.65;
+  const menuTextStartAt = menuRevealDuration * 0.9;
 
   const createCubicBezierEase = (p1x, p1y, p2x, p2y) => {
     const cx = 3 * p1x;
@@ -132,7 +134,7 @@ window.Sonia.initSiteCore = function () {
 
     menuTween.to(mobileMenu, {
       y: 0,
-      duration: 0.65
+      duration: menuRevealDuration
     });
 
     if (textLines.length) {
@@ -142,7 +144,7 @@ window.Sonia.initSiteCore = function () {
         ease: menuTextEase,
         stagger: 0.045,
         clearProps: "transform"
-      }, 0.12);
+      }, menuTextStartAt);
     }
 
     isMenuOpen = true;
