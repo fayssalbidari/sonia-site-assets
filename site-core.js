@@ -26,9 +26,8 @@ window.Sonia.initSiteCore = function () {
   let menuTextSplits = [];
 
   const getClosedY = () => window.innerHeight + 40;
-  const menuRevealDuration = 0.65;
+  const menuRevealDuration = 0.8;
   const menuTextDuration = 0.8;
-  const menuTextStartAt = menuRevealDuration;
 
   const createCubicBezierEase = (p1x, p1y, p2x, p2y) => {
     const cx = 3 * p1x;
@@ -144,7 +143,7 @@ window.Sonia.initSiteCore = function () {
         ease: menuTextEase,
         stagger: 0.045,
         clearProps: "transform"
-      }, menuTextStartAt);
+      });
     }
 
     isMenuOpen = true;
