@@ -464,6 +464,7 @@ window.Sonia.initSeries = function () {
   if (trigger && nextLink) {
     let isNavigatingToNextSeries = false;
     let nextSeriesTimeline = null;
+    let nextSeriesFadeTween = null;
     let isNextSeriesPrimed = false;
     let autoNextArmed = false;
     const initialScrollY = window.scrollY;
@@ -483,14 +484,32 @@ window.Sonia.initSeries = function () {
       });
     };
 
-    const hideNextSeriesLoader = () => {
+    const hideNextSeriesLoader = ({ immediate = true } = {}) => {
       if (!nextSeriesLoader || !nextSeriesSignature) return;
-      gsap.set(nextSeriesLoader, { autoAlpha: 0 });
-      gsap.set(nextSeriesSignature, { autoAlpha: 0 });
+
+      nextSeriesFadeTween?.kill();
+
+      if (immediate) {
+        gsap.set(nextSeriesLoader, { autoAlpha: 0 });
+        gsap.set(nextSeriesSignature, { autoAlpha: 0 });
+        return;
+      }
+
+      nextSeriesFadeTween = gsap.to(nextSeriesLoader, {
+        autoAlpha: 0,
+        duration: 0.28,
+        ease: "power2.out",
+        onComplete: () => {
+          gsap.set(nextSeriesSignature, { autoAlpha: 0 });
+          prepareNextSeriesPaths();
+          nextSeriesFadeTween = null;
+        }
+      });
     };
 
     const showNextSeriesLoader = () => {
       if (!nextSeriesLoader || !nextSeriesSignature) return;
+      nextSeriesFadeTween?.kill();
       gsap.set(nextSeriesLoader, { autoAlpha: 1 });
       gsap.set(nextSeriesSignature, { autoAlpha: 1 });
     };
@@ -538,8 +557,7 @@ window.Sonia.initSeries = function () {
         nextSeriesTimeline = null;
       }
 
-      hideNextSeriesLoader();
-      prepareNextSeriesPaths();
+      hideNextSeriesLoader({ immediate: false });
     };
 
     const goToNextSeries = () => {
