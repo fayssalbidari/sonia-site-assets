@@ -126,19 +126,40 @@ window.Sonia.initSeries = function () {
         if (!overlay || !node) return;
 
         textTimeline?.kill();
+        textTimeline = null;
         overlay.replaceChildren(node);
         activeTextNode = node;
       };
 
+      const collapseTextOverlay = () => {
+        const overlay = ensureTextOverlay();
+        if (!overlay) return;
+
+        textTimeline?.kill();
+        textTimeline = null;
+
+        if (!activeTextNode || !activeTextNode.isConnected) {
+          const fallbackNode = createTextNode(activeIndex);
+          if (!fallbackNode) return;
+          activeTextNode = fallbackNode;
+        }
+
+        overlay.replaceChildren(activeTextNode);
+        gsap.set(activeTextNode, {
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)"
+        });
+      };
+
       const animateTextToIndex = (index, direction) => {
         const overlay = ensureTextOverlay();
+        collapseTextOverlay();
+
         const outgoingNode = activeTextNode || createTextNode(activeIndex);
         const incomingNode = createTextNode(index);
         const incomingFromTop = direction < 0;
 
         if (!overlay || !outgoingNode || !incomingNode) return;
-
-        textTimeline?.kill();
 
         if (!outgoingNode.isConnected) {
           overlay.appendChild(outgoingNode);
