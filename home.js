@@ -33,6 +33,7 @@ window.Sonia.initHome = function () {
 
   const normalize = (value) => (value || "").trim().toLowerCase();
   const formatTwoDigits = (value) => String(value).padStart(2, "0");
+  const isMobile = () => window.innerWidth <= 767;
   const refreshRuntime = () => {
     window.lenis?.start?.();
     window.lenis?.resize?.();
@@ -90,6 +91,10 @@ window.Sonia.initHome = function () {
   let textOverlay = null;
   let activeTextNode = null;
   let activeTextIndex = null;
+  const rootOverflow = document.documentElement.style.overflow;
+  const bodyOverflow = document.body.style.overflow;
+  const bodyTouchAction = document.body.style.touchAction;
+  const pageHomeOverflow = homeRoot.style.overflow;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const wheelThreshold = 12;
@@ -373,6 +378,7 @@ window.Sonia.initHome = function () {
   }
 
   const onResize = () => {
+    applyMobileScrollLock();
     measureTextTrack();
     const activeId = slides[activeIndex]?.id;
     syncTextById(activeId);
@@ -403,7 +409,29 @@ window.Sonia.initHome = function () {
     goToSlide(deltaY > 0 ? 1 : -1);
   };
 
+  const preventNativeScroll = (event) => {
+    if (!isMobile()) return;
+    if (!event.cancelable) return;
+    event.preventDefault();
+  };
+
+  const applyMobileScrollLock = () => {
+    if (!isMobile()) {
+      document.documentElement.style.overflow = rootOverflow;
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.touchAction = bodyTouchAction;
+      homeRoot.style.overflow = pageHomeOverflow;
+      return;
+    }
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    homeRoot.style.overflow = "hidden";
+  };
+
   measureTextTrack();
+  applyMobileScrollLock();
   settleOnSlide(activeIndex);
   scheduleRuntimeRefresh();
 
@@ -428,6 +456,7 @@ window.Sonia.initHome = function () {
     window.addEventListener("keydown", onKeydown);
     workSection.addEventListener("touchstart", onTouchStart, { passive: true });
     workSection.addEventListener("touchend", onTouchEnd, { passive: true });
+    workSection.addEventListener("touchmove", preventNativeScroll, { passive: false });
   }
 
   window.Sonia.destroyHome = function () {
@@ -438,7 +467,13 @@ window.Sonia.initHome = function () {
       window.removeEventListener("keydown", onKeydown);
       workSection.removeEventListener("touchstart", onTouchStart);
       workSection.removeEventListener("touchend", onTouchEnd);
+      workSection.removeEventListener("touchmove", preventNativeScroll);
     }
+
+    document.documentElement.style.overflow = rootOverflow;
+    document.body.style.overflow = bodyOverflow;
+    document.body.style.touchAction = bodyTouchAction;
+    homeRoot.style.overflow = pageHomeOverflow;
 
     if (currentTimeline) {
       currentTimeline.kill();
