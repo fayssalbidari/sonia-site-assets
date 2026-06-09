@@ -23,6 +23,7 @@ window.Sonia.initHome = function () {
 
   workSection.dataset.homeInitialized = "true";
 
+  const syncViewport = syncRoot.querySelector('[data-home-sync-viewport]');
   const syncTrack = syncRoot.querySelector('[data-home-sync-track]');
   const syncTexts = Array.from(syncRoot.querySelectorAll('[data-home-sync-text]'));
   const yearStartEl = syncRoot.querySelector('[data-home-year-start-display]');
@@ -86,6 +87,9 @@ window.Sonia.initHome = function () {
   let touchStartY = 0;
   let currentTimeline = null;
   let currentIncomingIndex = null;
+  let textOverlay = null;
+  let activeTextNode = null;
+  let activeTextIndex = null;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const unlockThreshold = 0.5;
@@ -110,18 +114,76 @@ window.Sonia.initHome = function () {
     textItemHeight = syncTexts[0].getBoundingClientRect().height;
   }
 
-  function getTextTrackYById(id) {
+  function getTextIndexById(id) {
     if (!textMap.size || !textItemHeight) return null;
     const index = textMap.get(normalize(id));
     if (typeof index !== "number") return null;
-    return -(index * textItemHeight);
+    return index;
+  }
+
+  function ensureTextOverlay() {
+    if (!syncViewport) return null;
+    if (textOverlay?.isConnected) return textOverlay;
+
+    textOverlay = document.createElement("div");
+    textOverlay.setAttribute("data-home-sync-overlay", "");
+
+    gsap.set(syncViewport, { position: "relative" });
+    gsap.set(textOverlay, {
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      pointerEvents: "none"
+    });
+
+    syncViewport.appendChild(textOverlay);
+
+    if (syncTrack) {
+      gsap.set(syncTrack, { autoAlpha: 0 });
+    }
+
+    return textOverlay;
+  }
+
+  function createTextNode(index) {
+    const source = syncTexts[index];
+    const overlay = ensureTextOverlay();
+
+    if (!source || !overlay) return null;
+
+    const clone = source.cloneNode(true);
+    clone.removeAttribute("data-home-sync-text");
+
+    gsap.set(clone, {
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "inherit",
+      margin: 0,
+      yPercent: 0,
+      clipPath: "inset(0% 0% 0% 0%)"
+    });
+
+    return clone;
+  }
+
+  function setActiveText(index) {
+    const overlay = ensureTextOverlay();
+    const nextNode = createTextNode(index);
+
+    if (!overlay || !nextNode) return;
+
+    overlay.replaceChildren(nextNode);
+    activeTextNode = nextNode;
+    activeTextIndex = index;
   }
 
   function syncTextById(id) {
-    if (!syncTrack) return;
-    const y = getTextTrackYById(id);
-    if (y === null) return;
-    gsap.set(syncTrack, { y });
+    const index = getTextIndexById(id);
+    if (index === null) return;
+    setActiveText(index);
   }
 
   function syncMeta(id) {
@@ -255,6 +317,31 @@ window.Sonia.initHome = function () {
     currentIncomingIndex = incomingIndex;
     syncMeta(incomingSlide.id);
 
+    const overlay = ensureTextOverlay();
+    const outgoingTextNode = activeTextNode || createTextNode(outgoingIndex);
+    const incomingTextNode = createTextNode(incomingIndex);
+    const textIncomingFromTop = direction < 0;
+
+    if (overlay && outgoingTextNode && incomingTextNode) {
+      if (!outgoingTextNode.isConnected) {
+        overlay.appendChild(outgoingTextNode);
+      }
+
+      overlay.appendChild(incomingTextNode);
+
+      gsap.set(outgoingTextNode, {
+        yPercent: 0,
+        clipPath: "inset(0% 0% 0% 0%)"
+      });
+
+      gsap.set(incomingTextNode, {
+        yPercent: textIncomingFromTop ? -100 : 100,
+        clipPath: textIncomingFromTop
+          ? "inset(0% 0% 100% 0%)"
+          : "inset(100% 0% 0% 0%)"
+      });
+    }
+
     currentTimeline = gsap.timeline({
       defaults: {
         duration: 1,
@@ -278,10 +365,19 @@ window.Sonia.initHome = function () {
       }, 0);
     }
 
-    const incomingTextY = getTextTrackYById(incomingSlide.id);
-    if (incomingTextY !== null && syncTrack) {
-      currentTimeline.to(syncTrack, {
-        y: incomingTextY,
+    if (overlay && outgoingTextNode && incomingTextNode) {
+      currentTimeline.to(outgoingTextNode, {
+        yPercent: textIncomingFromTop ? 100 : -100,
+        clipPath: textIncomingFromTop
+          ? "inset(100% 0% 0% 0%)"
+          : "inset(0% 0% 100% 0%)",
+        duration: textTransitionDuration,
+        ease: "power4.inOut"
+      }, 0);
+
+      currentTimeline.to(incomingTextNode, {
+        yPercent: 0,
+        clipPath: "inset(0% 0% 0% 0%)",
         duration: textTransitionDuration,
         ease: "power4.inOut"
       }, 0);
@@ -364,6 +460,16 @@ window.Sonia.initHome = function () {
     imageLoadHandlers.forEach(({ image, onImageLoad }) => {
       image.removeEventListener("load", onImageLoad);
     });
+
+    textOverlay?.remove();
+    textOverlay = null;
+    activeTextNode = null;
+    activeTextIndex = null;
+
+    if (syncTrack) {
+      gsap.set(syncTrack, { clearProps: "opacity,visibility" });
+    }
+
     workSection.dataset.homeInitialized = "false";
   };
 
