@@ -37,6 +37,7 @@ window.Sonia.initSeries = function () {
     root.dataset.seriesGalleryInitialized = "true";
 
     const track = root.querySelector('[data-sync-track]');
+    const viewport = track?.parentElement || null;
     const texts = Array.from(root.querySelectorAll('[data-sync-text]'));
     const images = Array.from(pageRoot.querySelectorAll('[data-sync-image]'));
     const mediaImages = Array.from(
@@ -58,17 +59,139 @@ window.Sonia.initSeries = function () {
       let activeIndex = -1;
       let itemHeight = 0;
       let ticking = false;
+      let textOverlay = null;
+      let activeTextNode = null;
+      let textTimeline = null;
+      const parallaxMaxOffset = 6;
+
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
       const measure = () => {
         itemHeight = texts[0].getBoundingClientRect().height;
       };
 
-      const setActiveIndex = (index) => {
-        if (index < 0 || index >= texts.length) return;
-        if (index === activeIndex) return;
+      const ensureTextOverlay = () => {
+        if (!viewport) return null;
+        if (textOverlay?.isConnected) return textOverlay;
 
+        textOverlay = document.createElement("div");
+        textOverlay.setAttribute("data-series-sync-overlay", "");
+
+        gsap.set(viewport, { position: "relative" });
+        gsap.set(textOverlay, {
+          position: "absolute",
+          inset: 0,
+          overflow: "hidden",
+          pointerEvents: "none"
+        });
+
+        viewport.appendChild(textOverlay);
+        gsap.set(track, { autoAlpha: 0 });
+
+        return textOverlay;
+      };
+
+      const createTextNode = (index) => {
+        const source = texts[index];
+        const overlay = ensureTextOverlay();
+
+        if (!source || !overlay) return null;
+
+        const clone = source.cloneNode(true);
+        clone.removeAttribute("data-sync-text");
+
+        gsap.set(clone, {
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "inherit",
+          margin: 0,
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)"
+        });
+
+        return clone;
+      };
+
+      const setStaticText = (index) => {
+        const overlay = ensureTextOverlay();
+        const node = createTextNode(index);
+
+        if (!overlay || !node) return;
+
+        textTimeline?.kill();
+        overlay.replaceChildren(node);
+        activeTextNode = node;
+      };
+
+      const animateTextToIndex = (index, direction) => {
+        const overlay = ensureTextOverlay();
+        const outgoingNode = activeTextNode || createTextNode(activeIndex);
+        const incomingNode = createTextNode(index);
+        const incomingFromTop = direction < 0;
+
+        if (!overlay || !outgoingNode || !incomingNode) return;
+
+        textTimeline?.kill();
+
+        if (!outgoingNode.isConnected) {
+          overlay.appendChild(outgoingNode);
+        }
+
+        overlay.appendChild(incomingNode);
+        activeTextNode = incomingNode;
+
+        gsap.set(outgoingNode, {
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)"
+        });
+
+        gsap.set(incomingNode, {
+          yPercent: incomingFromTop ? -100 : 100,
+          clipPath: incomingFromTop
+            ? "inset(0% 0% 100% 0%)"
+            : "inset(100% 0% 0% 0%)"
+        });
+
+        textTimeline = gsap.timeline({
+          defaults: {
+            duration: 0.9,
+            ease: "power4.inOut"
+          },
+          onComplete: () => {
+            overlay.replaceChildren(incomingNode);
+            activeTextNode = incomingNode;
+            textTimeline = null;
+          }
+        });
+
+        textTimeline.to(outgoingNode, {
+          yPercent: incomingFromTop ? 100 : -100,
+          clipPath: incomingFromTop
+            ? "inset(100% 0% 0% 0%)"
+            : "inset(0% 0% 100% 0%)"
+        }, 0);
+
+        textTimeline.to(incomingNode, {
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)"
+        }, 0);
+      };
+
+      const setActiveIndex = (index, { immediate = false } = {}) => {
+        if (index < 0 || index >= texts.length) return;
+        if (index === activeIndex && !immediate) return;
+
+        const previousIndex = activeIndex;
         activeIndex = index;
-        track.style.transform = `translate3d(0, -${index * itemHeight}px, 0)`;
+
+        if (previousIndex === -1 || immediate) {
+          setStaticText(index);
+        } else {
+          animateTextToIndex(index, index > previousIndex ? 1 : -1);
+        }
 
         if (currentEl) {
           currentEl.textContent = formatTwoDigits(index + 1);
@@ -96,6 +219,15 @@ window.Sonia.initSeries = function () {
 
       const update = () => {
         ticking = false;
+        const viewportCenter = window.innerHeight * 0.5;
+
+        mediaImages.forEach((image) => {
+          const rect = image.getBoundingClientRect();
+          const center = rect.top + rect.height / 2;
+          const normalizedDistance = (center - viewportCenter) / window.innerHeight;
+          const offset = clamp(normalizedDistance * -parallaxMaxOffset, -parallaxMaxOffset, parallaxMaxOffset);
+          gsap.set(image, { yPercent: offset });
+        });
 
         const closestImage = getClosestImage();
         if (!closestImage) return;
@@ -116,11 +248,13 @@ window.Sonia.initSeries = function () {
 
       const onLoad = () => {
         measure();
+        setActiveIndex(activeIndex, { immediate: true });
         requestUpdate();
       };
 
       const onResize = () => {
         measure();
+        setActiveIndex(activeIndex, { immediate: true });
         requestUpdate();
       };
 
@@ -155,6 +289,10 @@ window.Sonia.initSeries = function () {
         window.removeEventListener("load", onLoad);
         window.removeEventListener("resize", onResize);
         window.removeEventListener("scroll", onScroll);
+        textTimeline?.kill();
+        textOverlay?.remove();
+        gsap.set(mediaImages, { clearProps: "transform" });
+        gsap.set(track, { clearProps: "opacity,visibility" });
         imageLoadHandlers.forEach(({ image, onImageLoad }) => {
           image.removeEventListener("load", onImageLoad);
         });
