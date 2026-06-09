@@ -26,9 +26,9 @@ window.Sonia.initSiteCore = function () {
   let menuTextSplits = [];
 
   const getClosedY = () => window.innerHeight + 40;
-  const menuTextOffset = 18;
   const menuRevealDuration = 0.65;
-  const menuTextStartAt = menuRevealDuration * 0.9;
+  const menuTextDuration = 0.8;
+  const menuTextStartAt = menuRevealDuration;
 
   const createCubicBezierEase = (p1x, p1y, p2x, p2y) => {
     const cx = 3 * p1x;
@@ -79,7 +79,7 @@ window.Sonia.initSiteCore = function () {
     }));
 
     const lines = menuTextSplits.flatMap((split) => split.lines);
-    gsap.set(lines, { y: menuTextOffset });
+    gsap.set(lines, { yPercent: 100 });
     return lines;
   };
 
@@ -139,8 +139,8 @@ window.Sonia.initSiteCore = function () {
 
     if (textLines.length) {
       menuTween.to(textLines, {
-        y: 0,
-        duration: 0.525,
+        yPercent: 0,
+        duration: menuTextDuration,
         ease: menuTextEase,
         stagger: 0.045,
         clearProps: "transform"
