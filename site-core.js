@@ -82,6 +82,8 @@ window.Sonia.initSiteCore = function () {
     return lines;
   };
 
+  const getMenuTextLines = () => menuTextSplits.flatMap((split) => split.lines || []);
+
   const applyClosedState = () => {
     gsap.set(mobileMenu, {
       y: getClosedY(),
@@ -155,6 +157,7 @@ window.Sonia.initSiteCore = function () {
     menuTween?.kill();
     mobileToggle.setAttribute("aria-expanded", "false");
     navbar.classList.remove("is-open");
+    const textLines = getMenuTextLines();
 
     menuTween = gsap.timeline({
       defaults: {
@@ -172,10 +175,19 @@ window.Sonia.initSiteCore = function () {
       }
     });
 
+    if (textLines.length) {
+      menuTween.to(textLines, {
+        yPercent: 100,
+        duration: 0.45,
+        ease: menuTextEase,
+        stagger: 0.03
+      });
+    }
+
     menuTween.to(mobileMenu, {
       y: getClosedY(),
       duration: 0.55
-    });
+    }, 0);
   };
 
   const toggleMenu = (event) => {
