@@ -59,6 +59,7 @@ window.Sonia.initTattoo = function () {
   const nextButton = overlay.querySelector(selectors.nextButton);
   const filterButtons = Array.from(pageRoot.querySelectorAll(selectors.filterButtons));
   const overlayNavs = Array.from(overlay.querySelectorAll(".tattoo-overlay__nav"));
+  const navbarFloat = pageRoot.querySelector(".navbar-float");
 
   if (
     !overlayPanel ||
@@ -76,6 +77,18 @@ window.Sonia.initTattoo = function () {
 
   const MOBILE_BREAKPOINT = 767;
   const isMobileGallery = () => window.innerWidth <= MOBILE_BREAKPOINT;
+  const isOverlayOpen = () => overlay.getAttribute("aria-hidden") === "false";
+
+  const syncNavbarFloatVisibility = () => {
+    if (!navbarFloat) return;
+
+    if (!isMobileGallery()) {
+      navbarFloat.style.display = "";
+      return;
+    }
+
+    navbarFloat.style.display = isOverlayOpen() ? "none" : "flex";
+  };
 
   container.querySelectorAll(".content[aria-hidden='true']").forEach((clone) => clone.remove());
 
@@ -124,8 +137,6 @@ window.Sonia.initTattoo = function () {
   let clipResetDelay = null;
   let wasMobileGallery = isMobileGallery();
   const clipProxy = { value: 0 };
-
-  const isOverlayOpen = () => overlay.getAttribute("aria-hidden") === "false";
 
   const updateContainerPosition = () => {
     if (!xTo || !yTo) return;
@@ -508,6 +519,7 @@ window.Sonia.initTattoo = function () {
   const closeOverlay = (immediate = false) => {
     if (!isOverlayOpen()) {
       if (immediate) setOverlayInitialState();
+      syncNavbarFloatVisibility();
       return;
     }
 
@@ -515,6 +527,7 @@ window.Sonia.initTattoo = function () {
 
     const finalize = () => {
       overlay.setAttribute("aria-hidden", "true");
+      syncNavbarFloatVisibility();
       if (!isMobileGallery()) galleryObserver?.enable();
     };
 
@@ -534,6 +547,7 @@ window.Sonia.initTattoo = function () {
     renderOverlay();
 
     overlay.setAttribute("aria-hidden", "false");
+    syncNavbarFloatVisibility();
     if (!isMobileGallery()) galleryObserver?.disable();
 
     if (!centerMediaElement(clickedMedia)) {
@@ -1006,6 +1020,7 @@ window.Sonia.initTattoo = function () {
   });
 
   const onResize = () => {
+    syncNavbarFloatVisibility();
     const isNowMobileGallery = isMobileGallery();
 
     if (isNowMobileGallery !== wasMobileGallery) {
@@ -1040,11 +1055,13 @@ window.Sonia.initTattoo = function () {
 
   cleanupFns.push(() => {
     closeOverlay(true);
+    syncNavbarFloatVisibility();
     section.dataset.tattooInitialized = "false";
   });
 
   overlay.classList.remove("hide");
   overlay.setAttribute("aria-hidden", "true");
+  syncNavbarFloatVisibility();
 
   rebuildGallery();
   setOverlayInitialState();
