@@ -111,22 +111,23 @@ window.Sonia.initSiteCore = function () {
     if (!isMobile() || isMenuOpen) return;
 
     menuTween?.kill();
-    const textLines = prepareMenuTextLines();
 
     navbar.classList.add("is-open");
     document.body.classList.add("nav-open");
     mobileToggle.setAttribute("aria-expanded", "true");
 
+    gsap.set(mobileMenu, {
+      visibility: "visible",
+      pointerEvents: "auto",
+      y: getClosedY()
+    });
+
+    const textLines = prepareMenuTextLines();
+
     menuTween = gsap.timeline({
       defaults: {
         ease: "power3.inOut"
       }
-    });
-
-    menuTween.set(mobileMenu, {
-      visibility: "visible",
-      pointerEvents: "auto",
-      y: getClosedY()
     });
 
     menuTween.to(mobileMenu, {
