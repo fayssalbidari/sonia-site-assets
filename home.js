@@ -90,17 +90,14 @@ window.Sonia.initHome = function () {
   let textOverlay = null;
   let activeTextNode = null;
   let activeTextIndex = null;
-  let interactionLockedUntil = 0;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const unlockThreshold = 0.5;
   const wheelThreshold = 12;
   const touchThreshold = 40;
   const idleScale = 1.22;
   const idleOffset = 8;
   const travelOffset = 6;
   const textTransitionDuration = 0.9;
-  const navigationCooldown = 950;
 
   const slides = workItems.map((item) => ({
     item,
@@ -110,15 +107,6 @@ window.Sonia.initHome = function () {
   const mediaImages = Array.from(homeRoot.querySelectorAll('[data-work="image"]'));
 
   const wrapIndex = (index) => (index + slides.length) % slides.length;
-  const now = () => (window.performance?.now?.() ?? Date.now());
-
-  function isInteractionLocked() {
-    return now() < interactionLockedUntil;
-  }
-
-  function lockInteraction(duration = navigationCooldown) {
-    interactionLockedUntil = now() + duration;
-  }
 
   function measureTextTrack() {
     if (!syncTexts.length) return;
@@ -272,25 +260,11 @@ window.Sonia.initHome = function () {
   }
 
   function finishCurrentTransition() {
-    if (!currentTimeline || !currentTimeline.isActive()) return false;
-    if (currentTimeline.progress() < unlockThreshold) return true;
-
-    currentTimeline.kill();
-
-    if (currentIncomingIndex !== null) {
-      settleOnSlide(currentIncomingIndex);
-    }
-
-    currentTimeline = null;
-    currentIncomingIndex = null;
-    return false;
+    return !!(currentTimeline && currentTimeline.isActive());
   }
 
   function goToSlide(direction) {
     if (direction === 0 || finishCurrentTransition()) return;
-    if (isInteractionLocked()) return;
-
-    lockInteraction();
 
     const outgoingIndex = activeIndex;
     const incomingIndex = wrapIndex(activeIndex + direction);
