@@ -86,6 +86,7 @@ window.Sonia.initSiteCore = function () {
 
     menuTween?.kill();
     mobileToggle.setAttribute("aria-expanded", "false");
+    navbar.classList.remove("is-open");
 
     menuTween = gsap.timeline({
       defaults: {
@@ -97,7 +98,6 @@ window.Sonia.initSiteCore = function () {
           pointerEvents: "none"
         });
 
-        navbar.classList.remove("is-open");
         document.body.classList.remove("nav-open");
         isMenuOpen = false;
       }
